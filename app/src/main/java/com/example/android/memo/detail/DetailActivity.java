@@ -1,8 +1,5 @@
-package com.example.android.memo;
+package com.example.android.memo.detail;
 
-import android.content.ContentValues;
-import android.database.Cursor;
-import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v4.app.NavUtils;
@@ -15,19 +12,19 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 
+import com.example.android.memo.R;
 import com.example.android.memo.data.MemoContract;
-import com.example.android.memo.data.MemoDbHelper;
 
 /**
  * Created by user on 2017-01-15.
  */
 
-public class DetailActivity extends AppCompatActivity {
+public class DetailActivity extends AppCompatActivity implements DetailContract.View {
 
     private EditText mMemoEdit;
     private Button mDeleteBtn;
-    private Cursor mCursor;
-    private MemoDbHelper mDbHelper;
+
+    private DetailContract.Presenter mPresenter;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -43,56 +40,68 @@ public class DetailActivity extends AppCompatActivity {
             actionBar.setDisplayHomeAsUpEnabled(true);
         }
 
-        // get Memo from db
-        long id = getIntent().getLongExtra(MemoContract.MemoEntry._ID,0);
-        mDbHelper = new MemoDbHelper(this);
-        mCursor = mDbHelper.getMemoCursorById(id);
+        mPresenter = new DetailPresenter();
+        mPresenter.attachView(this, this);
 
-        // set Memo
-        String memo = mCursor.getString(mCursor.getColumnIndex(MemoContract.MemoEntry.COLUMN_CONTENTS));
-        mMemoEdit.setText(memo);
-
+        long id = getIntent().getLongExtra(MemoContract.MemoEntry._ID, 0);
+        mPresenter.loadMemo(id);
 
         // delete button listener
         mDeleteBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                long id = getIntent().getLongExtra(MemoContract.MemoEntry._ID,0);
-                if(mDbHelper.deleteMemo(id)>0){
-                    finish();
-                }
+                long id = getIntent().getLongExtra(MemoContract.MemoEntry._ID, 0);
+                mPresenter.deleteMemo(id);
             }
         });
     }
 
-    public void modifyMemo(){
-        long id = getIntent().getLongExtra(MemoContract.MemoEntry._ID,0);
-        ContentValues cv = new ContentValues();
-        String memoText = mMemoEdit.getText().toString();
-        cv.put(MemoContract.MemoEntry.COLUMN_CONTENTS, memoText);
-        if(mDbHelper.updateMemo(id, cv)){
-            finish();
-        }
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        mPresenter.detachView();
+        mPresenter = null;
     }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         MenuInflater inflater = getMenuInflater();
-        inflater.inflate(R.menu.detail,menu);
+        inflater.inflate(R.menu.detail, menu);
         return true;
     }
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        switch (item.getItemId()){
+        switch (item.getItemId()) {
             case R.id.action_update:
-                modifyMemo();
+                long id = getIntent().getLongExtra(MemoContract.MemoEntry._ID, 0);
+                String memoText = mMemoEdit.getText().toString();
+                mPresenter.saveMemo(id, memoText);
                 return true;
             case android.R.id.home:
-                NavUtils.navigateUpFromSameTask(this);
+                backToMainActivity();
                 return true;
 
         }
         return super.onOptionsItemSelected(item);
+    }
+
+    public void backToMainActivity() {
+        NavUtils.navigateUpFromSameTask(this);
+    }
+
+    @Override
+    public void moveToMainActivity() {
+        finish();
+    }
+
+    @Override
+    public void updateMemo(final String memo) {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                mMemoEdit.setText(memo);
+            }
+        });
     }
 }

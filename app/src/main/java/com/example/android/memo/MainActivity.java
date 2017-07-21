@@ -16,6 +16,7 @@ import android.widget.ProgressBar;
 
 import com.example.android.memo.data.MemoContract;
 import com.example.android.memo.data.MemoDbHelper;
+import com.example.android.memo.detail.DetailActivity;
 
 public class MainActivity extends AppCompatActivity implements
         MemoAdaptor.MemoAdaptorOnClickHandler,
